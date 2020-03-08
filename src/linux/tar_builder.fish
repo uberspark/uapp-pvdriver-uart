@@ -30,7 +30,9 @@ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- INSTALL_MOD_PATH=(pwd)/../my_ke
 pushd ../
 
 # Create the archive.
-tar cvzf my_kernel.tar.gz my_kernel/*
+tar cvzf my_kernel.tar.gz -C my_kernel .
+
+rm -rf my_kernel
 
 # TODO: Make IP address configurable.
 # TODO: Actually modify the Pi's boot kernel using SSH commands. This is potentially a second script, after tar_builder is ran.
