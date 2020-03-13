@@ -16,12 +16,16 @@ Using this configuration, I was able to transfer a 26MB file from my Ubuntu host
 Some minor tweaks to the Raspbian install were necessary to get the serial interface configured. First, there are two serial UARTs on the Pi, referred to as the "Mini UART" and the "PL011". The Mini UART is the default interface for the serial port and has some limitations that make it unsuitable for our test case. For example, the Mini UART does not support hardware flow control. To address this, we must configure the Pi to use the PL011 interface. In its default configuration, the Pi uses the PL011 UART to host the Bluetooth controller, so the Bluetooth controller and the Bluetooth service have to be disabled, before the UART is freed up for other purposes. This is accomplished with the following changes:
 
 - In raspi-config, enable the serial UART, disabling the default terminal interface on the port.
-- Using systemctl, disable/stop the hciuart service
-- In /boot/config.txt, apply configuration: `dtoverlay=disable-bt`
+- Using systemctl, disable/stop the hciuart service : sudo systemctl disable hciuart 
+- In /boot/config.txt, apply configuration in a separate line: `dtoverlay=disable-bt`
+
+Install the rpirtscts utility as described on this page:
+https://github.com/mholling/rpirtscts
+
 
 The PL011 uses a separate device file from the Mini UART and is found at /dev/ttyAMA0. Two additional tweaks are necessary to enable hardware flow control on the PL011:
 
-- `stty -f /dev/ttyAMA0 crtscts`
+- `stty -F /dev/ttyAMA0 crtscts`
 - `rpirtscts on`
 
 The first command sets terminal line settings for the device within the kernel. The second command is a custom script that was written for the Pi and was made available as a Github project. This command actually re-configures the Pi's GPIO pins for hardware flow control on the serial port. Its function is very simple and is a small amount of C code to do this.
