@@ -15,3 +15,5 @@ Make sure the cross-compiler toolchain is on your path.
 
 Once you've re-configured your kernel, save the configuration and re-run the
 fish script, which will render an archive to copy to the Pi over scp.
+
+You should copy the fish script to the top-level of your kernel tree, as it uses relative paths that assume this as a starting location.
