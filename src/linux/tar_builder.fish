@@ -11,7 +11,7 @@ end
 
 # Create output directories.
 # TODO: copy over work from a previous effort that makes the module version string a variable.
-mkdir -p ../my_kernel/lib/modules/4.19.106-v7+
+mkdir -p ../my_kernel/lib/modules
 mkdir -p ../my_kernel/overlays
 
 # Build kernel artifacts.
