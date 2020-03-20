@@ -18,10 +18,26 @@
 #include <linux/console.h>
 #include <linux/vt_kern.h>
 #include <linux/input.h>
+#include <linux/kernel.h>
+#include <linux/ctype.h>
+#include <linux/kgdb.h>
+#include <linux/kdb.h>
+#include <linux/tty.h>
+#include <linux/console.h>
+#include <linux/vt_kern.h>
+#include <linux/input.h>
+#include <linux/module.h>
+#include <linux/serial_core.h>
+
 
 
 #define  DEVICE_NAME "ambachar"    ///< The device will appear at /dev/ambachar using this value
 #define  CLASS_NAME  "amba"        ///< The device class -- this is a character device driver
+#define MAX_CONFIG_LEN		40
+static char config[MAX_CONFIG_LEN] = "ttyAMA0";
+static struct kgdb_io		kgdboc_io_ops;
+static struct tty_driver	*kgdb_tty_driver;
+static int			kgdb_tty_line;
  
 MODULE_LICENSE("GPL");            ///< The license type -- this affects available functionality
 MODULE_AUTHOR("Derek Molloy");    ///< The author -- visible when you use modinfo
@@ -29,8 +45,6 @@ MODULE_DESCRIPTION("A simple Linux char driver for the BBB");  ///< The descript
 MODULE_VERSION("0.1");            ///< A version number to inform users
  
 static int    majorNumber;                  ///< Stores the device number -- determined automatically
-static char   message[256] = {0};           ///< Memory for the string that is passed from userspace
-static short  size_of_message;              ///< Used to remember the size of the string stored
 static int    numberOpens = 0;              ///< Counts the number of times the device is opened
 static struct class*  ambacharClass  = NULL; ///< The device-driver class struct pointer
 static struct device* ambacharDevice = NULL; ///< The device-driver device struct pointer
@@ -61,7 +75,39 @@ static struct file_operations fops =
  *  @return returns 0 if successful
  */
 static int __init ambachar_init(void){
+   int tty_line = 0;
+   char *cptr = config;
+   struct tty_driver *p;
+   struct console *cons;
+
    printk(KERN_INFO "AmbaChar: Initializing the AmbaChar LKM\n");
+   kgdb_tty_driver = NULL;
+
+   p = tty_find_polling_driver(cptr, &tty_line);
+
+   if(p == NULL){
+       printk(KERN_INFO "AmbaChar: Could not find polling driver.\n");
+   }
+   else{
+       printk(KERN_INFO "AmbaChar: Found polling driver.\n");
+   }
+
+   cons = console_drivers;
+   while (cons) {
+         int idx;
+         if (cons->device && cons->device(cons, &idx) == p &&
+               idx == tty_line) {
+                   kgdboc_io_ops.is_console = 1;
+                   break;
+          }
+          cons = cons->next;
+   }
+
+   kgdb_tty_driver = p;
+   kgdb_tty_line = tty_line;
+   
+   printk("kgdb_tty_driver is set to :  %p\n",kgdb_tty_driver);
+   printk("kgdb_tty_line is set to :  %d\n",kgdb_tty_line);
 
    // Try to dynamically allocate a major number for the device -- more difficult but worth it
    majorNumber = register_chrdev(0, DEVICE_NAME, &fops);
@@ -124,18 +170,21 @@ static int dev_open(struct inode *inodep, struct file *filep){
  *  @param offset The offset if required
  */
 static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *offset){
-   int error_count = 0;
-   // copy_to_user has the format ( * to, *from, size) and returns 0 on success
-   error_count = copy_to_user(buffer, message, size_of_message);
- 
-   if (error_count==0){            // if true then have success
-      printk(KERN_INFO "AmbaChar: Sent %d characters to the user\n", size_of_message);
-      return (size_of_message=0);  // clear the position to the start and return 0
-   }
-   else {
-      printk(KERN_INFO "AmbaChar: Failed to send %d characters to the user\n", error_count);
-      return -EFAULT;              // Failed -- return a bad address message (i.e. -14)
-   }
+   int i;
+   int read_count = 0;
+   int ret_char;
+   printk("dev_read() called \n");
+   for(i=0;i<len;i++){
+      ret_char =kgdb_tty_driver->ops->poll_get_char(kgdb_tty_driver, kgdb_tty_line);
+      if(ret_char != NO_POLL_CHAR){
+	 buffer[i] = ret_char;
+	 read_count++;
+      }
+      else{
+	  break;
+      }
+   } 
+   return read_count;
 }
  
 /** @brief This function is called whenever the device is being written to from user space i.e.
@@ -147,9 +196,12 @@ static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *of
  *  @param offset The offset if required
  */
 static ssize_t dev_write(struct file *filep, const char *buffer, size_t len, loff_t *offset){
-   sprintf(message, "%s(%zu letters)", buffer, len);   // appending received string with its length
-   size_of_message = strlen(message);                 // store the length of the stored message
-   printk(KERN_INFO "AmbaChar: Received %zu characters from the user\n", len);
+   int i;
+   printk("dev_write() called \n");
+   for(i=0;i<len;i++){
+      kgdb_tty_driver->ops->poll_put_char(kgdb_tty_driver,kgdb_tty_line, buffer[i]);
+   }
+
    return len;
 }
  
