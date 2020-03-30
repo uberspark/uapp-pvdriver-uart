@@ -2,7 +2,6 @@
 import os
 try:
     f = os.open("/dev/ambachar",os.O_RDWR)
-    print( "file opened")
     os.write(f,"test")
     data = os.read(f,16)
     print data
