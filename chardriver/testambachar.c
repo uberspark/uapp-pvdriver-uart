@@ -32,14 +32,10 @@ int main(){
       return errno;
    }
  
-   printf("Press ENTER to read back from the device...\n");
-   getchar();
  
    printf("Reading from the device...\n");
-   ret = read(fd, receive, BUFFER_LENGTH);        // Read the response from the LKM
-   if (ret < 0){
-      perror("Failed to read the message from the device.");
-      return errno;
+   while( read(fd, receive, BUFFER_LENGTH) == 0 ){        // Read the response from the other side 
+	   ;
    }
    printf("The received message is: [%s]\n", receive);
    printf("End of the program\n");
