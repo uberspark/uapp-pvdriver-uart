@@ -17,7 +17,13 @@ Some minor tweaks to the Raspbian install were necessary to get the serial inter
 
 - In raspi-config, enable the serial UART, disabling the default terminal interface on the port.
 - Using systemctl, disable/stop the hciuart service : sudo systemctl disable hciuart 
-- In /boot/config.txt, apply configuration in a separate line: `dtoverlay=disable-bt`
+- In /boot/config.txt, apply configuration in a separate line:
+
+```
+dtoverlay=pi3-disable-bt
+```
+
+It turns out there are actually two options on some systems, disable-bt and pi3-disable-bt. You must use pi3-disable-bt in this case or it will not work. Your serial port will not connect.
 
 Install the rpirtscts utility as described on this page:
 https://github.com/mholling/rpirtscts
@@ -35,3 +41,63 @@ With these configurations in place, we put one Python script on the host (server
 The set up of the client and server serial ports is identical, using the same Python serial port library. The only difference is in the behavior of the client and server.
 
 After the test ran, I did a hash sum on the source and destination files and they were identical, so the transfer completed without error. Additionally, to validate that the hardware flow control was being used during this test, I ran an additional test and removed one of the GPIO pins from the hardware flow control path on the Pi. The result was that the transfer stalled. No further data was sent to the Pi after removing the flow control pin. I placed the connector back onto the pin and the transfer resumed. It was a nice surprise to see how resilient this mechanism was and did not cause any data errors.
+
+## Character driver and user space test application 
+
+### Driver ambachar.c
+
+The driver ambachar is a new character device file interface and driver, useful for creating a userspace polling interface to the AMBA PL011 UART driver. It is modeled after the kgdb scheme and uses amba-pl011.c as a low level driver by calling the polling functions. This was verified by printk statements.  
+
+The driver ambachar.c is placed in:
+
+```
+linux/drivers/tty/serial
+```
+
+the Makefile in this folder is used to replace the original Makefile, also in the linux/drivers/tty/serial folder. Recompile the modules with the command:   
+
+```
+make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- modules -j 16   
+```
+
+Transfer the new driver to the Pi:
+```
+scp ambachar.ko pi@ip_address_of_pi:~
+```
+
+Load the driver on the Pi:
+```
+ssh pi@ip_address_of_pi
+insmod ambachar.ko
+```
+
+Check that the driver is loaded:
+```
+lsmod | grep ambachar
+```
+
+To unload the driver:
+```
+rmmod ambachar.ko
+```
+  
+### Test Application  
+  
+The test application, testambachar.c, is an example of how the driver can be used. It can be built at the Raspberry Pi through Makefile.rpi. Transfer to Pi and put it in a separate folder along with Makefile.rpi. Rename the Makefile and run it:
+
+```
+mv Makefile.rpi Makefile
+make  
+sudo ./testambachar  
+```
+
+### Driver amba-pl011.c   
+This is a file that merged the functionality of the original amba-pl011.c and ambachar.c. In this scenario there is no need of ambachar.c  
+
+```
+make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- modules -j 16   
+scp amba-pl011.ko pi@ip_address_of_pi:~   // Transfer to the Pi    
+rmmod amba-pl011.ko                       // Unload the driver     
+insmod amba-pl011.ko                      // Load the driver    
+lsmod | grep amba-pl011                   // Check that it is loaded     
+```
