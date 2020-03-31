@@ -25,11 +25,8 @@ Transfer to Pi and put it in a separate folder along with Makefile.rpi.
 Rename Makefile.rpi to Makefile and run make.  
 ./testambachar  
 
-## Driver amba-pl011.c   
-This is a file that merged the functionality of the original amba-pl011.c and ambachar.c.  
-In this scenario there is no need of ambachar.c  
-make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- modules -j 16   
-scp amba-pl011.ko pi@ip_address_of_pi:~   // Transfer to the Pi    
-rmmod amba-pl011.ko                       // Unload the driver     
-insmod amba-pl011.ko                      // Load the driver    
-lsmod | grep amba-pl011                   // Check that it is loaded     
+Additionally there is a python file testambachar.py which has very similar functionality and can serve as a test client program.
+
+## Before You Begin
+Make sure that the main UART is enabled and the bluetooth service is stopped.
+You have to have your TDI cable connected correctly to  the Pi.
