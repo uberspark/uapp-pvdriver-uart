@@ -2,7 +2,7 @@
 #
 # author: amit vasudevan (amitvasudevan@acm.org)
 
-# this makefile depends on two external environment variable definitions
+# this makefile depends on the following external environment variable definitions
 #
 # PATH_UXMHF = full path to uxmhf (git) source tree
 #
