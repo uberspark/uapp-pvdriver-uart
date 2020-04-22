@@ -44,7 +44,6 @@
 
 #include <uapp-pvdriver-uart.h>
 
-#if 0
 #ifndef __HVC__
 #define __HVC__
 void __hvc(u32 uhcall_function, void *uhcall_buffer,
@@ -62,10 +61,10 @@ void __hvc(u32 uhcall_function, void *uhcall_buffer,
 }
 #endif
 
+////// init
+void uxmhfpvduart_init(void){
 
-void mavlinkserhb_initialize(u32 baudrate){
-
-	uapp_mavlinkserhb_param_t *mlhbsp;
+	uapp_pvdriver_uart_param_t *mlhbsp;
 	struct page *mlhbsp_page;
 	u32 mlhbsp_paddr;
 
@@ -75,13 +74,12 @@ void mavlinkserhb_initialize(u32 baudrate){
 		return false;
 	}
 
-	mlhbsp = (uapp_mavlinkserhb_param_t *)page_address(mlhbsp_page);
+	mlhbsp = (uapp_pvdriver_uart_param_t *)page_address(mlhbsp_page);
 
-	mlhbsp->uhcall_fn = UAPP_MAVLINKSERHB_UHCALL_INITIALIZE;
-	mlhbsp->iparam_1 = baudrate;
+	mlhbsp->uhcall_fn = UAPP_PVDRIVER_UART_UHCALL_INIT;
 
 	mlhbsp_paddr = page_to_phys(mlhbsp_page);
-	__hvc(UAPP_MAVLINKSERHB_UHCALL, mlhbsp_paddr, sizeof(uapp_mavlinkserhb_param_t));
+	__hvc(UAPP_PVDRIVER_UART_UHCALL, mlhbsp_paddr, sizeof(uapp_pvdriver_uart_param_t));
 
 	if(!mlhbsp->status){
 		__free_page(mlhbsp_page);
@@ -93,10 +91,10 @@ void mavlinkserhb_initialize(u32 baudrate){
 }
 
 
+////// send
+bool uxmhfpvduart_send(u8 *buffer, u32 buf_len){
 
-bool mavlinkserhb_send(u8 *buffer, u32 buf_len){
-
-	uapp_mavlinkserhb_param_t *mlhbsp;
+	uapp_pvdriver_uart_param_t *mlhbsp;
 	struct page *mlhbsp_page;
 	u32 mlhbsp_paddr;
 	struct page *buffer_page;
@@ -113,7 +111,7 @@ bool mavlinkserhb_send(u8 *buffer, u32 buf_len){
 		return false;
 	}
 
-	mlhbsp = (uapp_mavlinkserhb_param_t *)page_address(mlhbsp_page);
+	mlhbsp = (uapp_pvdriver_uart_param_t *)page_address(mlhbsp_page);
 
 	//allocate buffer physical page
 	buffer_page = alloc_page(GFP_KERNEL | __GFP_ZERO);
@@ -128,12 +126,12 @@ bool mavlinkserhb_send(u8 *buffer, u32 buf_len){
 	memcpy(page_address(buffer_page), buffer, buf_len);
 
 	//issue send hypercall
-	mlhbsp->uhcall_fn = UAPP_MAVLINKSERHB_UHCALL_SEND;
+	mlhbsp->uhcall_fn = UAPP_PVDRIVER_UART_UHCALL_SEND;
 	mlhbsp->iparam_1 = buffer_page_paddr;
 	mlhbsp->iparam_2 = buf_len;
 
 	mlhbsp_paddr = page_to_phys(mlhbsp_page);
-	__hvc(UAPP_MAVLINKSERHB_UHCALL, mlhbsp_paddr, sizeof(uapp_mavlinkserhb_param_t));
+	__hvc(UAPP_PVDRIVER_UART_UHCALL, mlhbsp_paddr, sizeof(uapp_pvdriver_uart_param_t));
 
 	if(!mlhbsp->status){
 		__free_page(mlhbsp_page);
@@ -147,44 +145,10 @@ bool mavlinkserhb_send(u8 *buffer, u32 buf_len){
 }
 
 
+////// recv
+bool uxmhfpvduart_recv(u8 *buffer, u32 max_len, u32 *len_read, bool *uartreadbufexhausted){
 
-bool mavlinkserhb_checkrecv(void){
-
-	uapp_mavlinkserhb_param_t *mlhbsp;
-	struct page *mlhbsp_page;
-	u32 mlhbsp_paddr;
-
-	//allocate parameter page
-	mlhbsp_page = alloc_page(GFP_KERNEL | __GFP_ZERO);
-
-	if(!mlhbsp_page){
-		return false;
-	}
-
-	mlhbsp = (uapp_mavlinkserhb_param_t *)page_address(mlhbsp_page);
-
-	//issue checkrecv hypercall
-	mlhbsp->uhcall_fn = UAPP_MAVLINKSERHB_UHCALL_CHECKRECV;
-
-	mlhbsp_paddr = page_to_phys(mlhbsp_page);
-	__hvc(UAPP_MAVLINKSERHB_UHCALL, mlhbsp_paddr, sizeof(uapp_mavlinkserhb_param_t));
-
-
-	if(!mlhbsp->status){
-		__free_page(mlhbsp_page);
-		return false;
-	}else{
-		__free_page(mlhbsp_page);
-		return true;
-	}
-}
-
-
-
-
-bool mavlinkserhb_recv(u8 *buffer, u32 max_len, u32 *len_read, bool *uartreadbufexhausted){
-
-	uapp_mavlinkserhb_param_t *mlhbsp;
+	uapp_pvdriver_uart_param_t *mlhbsp;
 	struct page *mlhbsp_page;
 	u32 mlhbsp_paddr;
 	struct page *buffer_page;
@@ -201,7 +165,7 @@ bool mavlinkserhb_recv(u8 *buffer, u32 max_len, u32 *len_read, bool *uartreadbuf
 		return false;
 	}
 
-	mlhbsp = (uapp_mavlinkserhb_param_t *)page_address(mlhbsp_page);
+	mlhbsp = (uapp_pvdriver_uart_param_t *)page_address(mlhbsp_page);
 
 	//allocate buffer physical page
 	buffer_page = alloc_page(GFP_KERNEL | __GFP_ZERO);
@@ -214,13 +178,13 @@ bool mavlinkserhb_recv(u8 *buffer, u32 max_len, u32 *len_read, bool *uartreadbuf
 
 
 	//issue send hypercall
-	mlhbsp->uhcall_fn = UAPP_MAVLINKSERHB_UHCALL_RECV;
+	mlhbsp->uhcall_fn = UAPP_PVDRIVER_UART_UHCALL_RECV;
 	mlhbsp->iparam_1 = buffer_page_paddr;
 	mlhbsp->iparam_2 = max_len;
 
 
 	mlhbsp_paddr = page_to_phys(mlhbsp_page);
-	__hvc(UAPP_MAVLINKSERHB_UHCALL, mlhbsp_paddr, sizeof(uapp_mavlinkserhb_param_t));
+	__hvc(UAPP_PVDRIVER_UART_UHCALL, mlhbsp_paddr, sizeof(uapp_pvdriver_uart_param_t));
 
 
 	if(!mlhbsp->status){
@@ -248,65 +212,97 @@ bool mavlinkserhb_recv(u8 *buffer, u32 max_len, u32 *len_read, bool *uartreadbuf
 }
 
 
-bool mavlinkserhb_activatehbhyptask(u32 first_period, u32 recurring_period,
-		u32 priority){
+////// can send
+bool uxmhfpvduart_can_send(void){
 
-	uapp_mavlinkserhb_param_t *mlhbsp;
+	uapp_pvdriver_uart_param_t *mlhbsp;
 	struct page *mlhbsp_page;
 	u32 mlhbsp_paddr;
 
+	//allocate parameter page
 	mlhbsp_page = alloc_page(GFP_KERNEL | __GFP_ZERO);
 
 	if(!mlhbsp_page){
 		return false;
 	}
 
-	mlhbsp = (uapp_mavlinkserhb_param_t *)page_address(mlhbsp_page);
+	mlhbsp = (uapp_pvdriver_uart_param_t *)page_address(mlhbsp_page);
 
-	mlhbsp->uhcall_fn = UAPP_MAVLINKSERHB_UHCALL_ACTIVATEHBHYPTASK;
-	mlhbsp->iparam_1 = first_period;
-	mlhbsp->iparam_2 = recurring_period;
-	mlhbsp->iparam_3 = priority;
+	//issue checkrecv hypercall
+	mlhbsp->uhcall_fn = UAPP_PVDRIVER_UART_UHCALL_CAN_SEND;
 
 	mlhbsp_paddr = page_to_phys(mlhbsp_page);
-	__hvc(UAPP_MAVLINKSERHB_UHCALL, mlhbsp_paddr, sizeof(uapp_mavlinkserhb_param_t));
+	__hvc(UAPP_PVDRIVER_UART_UHCALL, mlhbsp_paddr, sizeof(uapp_pvdriver_uart_param_t));
+
 
 	if(!mlhbsp->status){
 		__free_page(mlhbsp_page);
 		return false;
+	}else{
+		__free_page(mlhbsp_page);
+		return true;
 	}
-
-	__free_page(mlhbsp_page);
-	return true;
 }
 
 
-bool mavlinkserhb_deactivatehbhyptask(void){
+////// can recv
+bool uxmhfpvduart_can_recv(void){
 
-	uapp_mavlinkserhb_param_t *mlhbsp;
+	uapp_pvdriver_uart_param_t *mlhbsp;
 	struct page *mlhbsp_page;
 	u32 mlhbsp_paddr;
 
+	//allocate parameter page
 	mlhbsp_page = alloc_page(GFP_KERNEL | __GFP_ZERO);
 
 	if(!mlhbsp_page){
 		return false;
 	}
 
-	mlhbsp = (uapp_mavlinkserhb_param_t *)page_address(mlhbsp_page);
+	mlhbsp = (uapp_pvdriver_uart_param_t *)page_address(mlhbsp_page);
 
-	mlhbsp->uhcall_fn = UAPP_MAVLINKSERHB_UHCALL_DEACTIVATEHBHYPTASK;
+	//issue checkrecv hypercall
+	mlhbsp->uhcall_fn = UAPP_PVDRIVER_UART_UHCALL_CAN_RECV;
 
 	mlhbsp_paddr = page_to_phys(mlhbsp_page);
-	__hvc(UAPP_MAVLINKSERHB_UHCALL, mlhbsp_paddr, sizeof(uapp_mavlinkserhb_param_t));
+	__hvc(UAPP_PVDRIVER_UART_UHCALL, mlhbsp_paddr, sizeof(uapp_pvdriver_uart_param_t));
+
 
 	if(!mlhbsp->status){
 		__free_page(mlhbsp_page);
 		return false;
+	}else{
+		__free_page(mlhbsp_page);
+		return true;
 	}
-
-	__free_page(mlhbsp_page);
-	return true;
 }
 
-#endif
+
+
+////// flush
+bool uxmhfpvduart_flush(void){
+
+	uapp_pvdriver_uart_param_t *mlhbsp;
+	struct page *mlhbsp_page;
+	u32 mlhbsp_paddr;
+
+	//allocate parameter page
+	mlhbsp_page = alloc_page(GFP_KERNEL | __GFP_ZERO);
+
+	if(!mlhbsp_page){
+		return false;
+	}
+
+	mlhbsp = (uapp_pvdriver_uart_param_t *)page_address(mlhbsp_page);
+
+	//issue checkrecv hypercall
+	mlhbsp->uhcall_fn = UAPP_PVDRIVER_UART_UHCALL_FLUSH;
+
+	mlhbsp_paddr = page_to_phys(mlhbsp_page);
+	__hvc(UAPP_PVDRIVER_UART_UHCALL, mlhbsp_paddr, sizeof(uapp_pvdriver_uart_param_t));
+
+	__free_page(mlhbsp_page);
+}
+
+
+
