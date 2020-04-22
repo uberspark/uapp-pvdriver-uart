@@ -83,13 +83,13 @@ static int dev_open(struct inode *inodep, struct file *filep){
 
 static ssize_t dev_write(struct file *filep, const char *buffer, size_t len, loff_t *offset){
 	switch(len){
-		case UAPP_uxmhfpvduart_UHCALL_INITIALIZE:
+		case UAPP_PVDRIVER_UART_UHCALL_INIT:
 			printk(KERN_INFO "uxmhfpvduartkmod: initialize\n");
-			uxmhfpvduart_initialize(115200);
+			uxmhfpvduart_init();
 			printk(KERN_INFO "uxmhfpvduartkmod: initialization successful!\n");
 			break;
 
-		case UAPP_uxmhfpvduart_UHCALL_SEND:
+		case UAPP_PVDRIVER_UART_UHCALL_SEND:
 			printk(KERN_INFO "uxmhfpvduartkmod: send\n");
 			if(uxmhfpvduart_send("Test", 4))
 				printk(KERN_INFO "uxmhfpvduartkmod: send successful!\n");
@@ -97,47 +97,43 @@ static ssize_t dev_write(struct file *filep, const char *buffer, size_t len, lof
 				printk(KERN_INFO "uxmhfpvduartkmod: error in send\n");
 			break;
 
-		case UAPP_uxmhfpvduart_UHCALL_CHECKRECV:
-			printk(KERN_INFO "uxmhfpvduartkmod: checkrecv\n");
-			if(uxmhfpvduart_checkrecv())
-				printk(KERN_INFO "uxmhfpvduartkmod: recv buffer has data!\n");
-			else
-				printk(KERN_INFO "uxmhfpvduartkmod: no data in recv buffer\n");
-			break;
-
-		case UAPP_uxmhfpvduart_UHCALL_RECV:
+		case UAPP_PVDRIVER_UART_UHCALL_RECV:
 		{
 			bool readbufferexhausted;
 			u32 len_read;
 			u8 buffer[3];
 			printk(KERN_INFO "uxmhfpvduartkmod: recv\n");
 			memset(buffer, sizeof(buffer), 0);
-			if(uxmhfpvduart_recv(&buffer, sizeof(buffer), &len_read, &readbufferexhausted)){
+			if(uxmhfpvduart_recv((u8  *)&buffer, sizeof(buffer), &len_read, &readbufferexhausted)){
 				printk(KERN_INFO "uxmhfpvduartkmod: read: <0x%02x|0x%02x|0x%02x>, len_read=%u, \
 						readbufferexhausted=%u\n", buffer[0], buffer[1], buffer[2],
 						len_read, readbufferexhausted);
-
 			}else{
 				printk(KERN_INFO "uxmhfpvduartkmod: no data in recv buffer\n");
 			}
 		}
+		break;
+
+		case UAPP_PVDRIVER_UART_UHCALL_CAN_SEND:
+			printk(KERN_INFO "uxmhfpvduartkmod: can send\n");
+			if(uxmhfpvduart_can_send())
+				printk(KERN_INFO "uxmhfpvduartkmod: transmit buffer has space!\n");
+			else
+				printk(KERN_INFO "uxmhfpvduartkmod: transmit buffer is full\n");
 			break;
 
-		case UAPP_uxmhfpvduart_UHCALL_ACTIVATEHBHYPTASK:
-			if(uxmhfpvduart_activatehbhyptask((0.5 * HYPMTSCHEDULER_TIME_1SEC),
-					(0.5 * HYPMTSCHEDULER_TIME_1SEC), 99)){
-				printk(KERN_INFO "uxmhfpvduartkmod: started hb hyptask\n");
-			}else{
-				printk(KERN_INFO "uxmhfpvduartkmod: could not activate hb hyptask\n");
-			}
+		case UAPP_PVDRIVER_UART_UHCALL_CAN_RECV:
+			printk(KERN_INFO "uxmhfpvduartkmod: can recv\n");
+			if(uxmhfpvduart_can_recv())
+				printk(KERN_INFO "uxmhfpvduartkmod: recv buffer has data!\n");
+			else
+				printk(KERN_INFO "uxmhfpvduartkmod: no data in recv buffer\n");
 			break;
 
-		case UAPP_uxmhfpvduart_UHCALL_DEACTIVATEHBHYPTASK:
-			if(uxmhfpvduart_deactivatehbhyptask()){
-				printk(KERN_INFO "uxmhfpvduartkmod: deactivated hb hyptask\n");
-			}else{
-				printk(KERN_INFO "uxmhfpvduartkmod: could not de-activate hb hyptask\n");
-			}
+		case UAPP_PVDRIVER_UART_UHCALL_FLUSH:
+			printk(KERN_INFO "uxmhfpvduartkmod: going to flush UART buffers\n");
+			uxmhfpvduart_flush();
+			printk(KERN_INFO "uxmhfpvduartkmod: UART buffers flushed\n");
 			break;
 
 		default:
@@ -213,4 +209,3 @@ void uxmhfpvduartkmod_exit(void)
 
 module_init(uxmhfpvduartkmod_init);
 module_exit(uxmhfpvduartkmod_exit);
-#endif
