@@ -41,33 +41,21 @@
 #include <asm/uaccess.h>          // required for the copy to user function
 
 #include <uapp-pvdriver-uart.h>
+#include "pvdriver_uart.h"
 
-#if 0
-
-#define  DEVICE_NAME "mavlinkserhbkmod"    			//device will appear at /dev/uhcallkmod
-#define  CLASS_NAME  "mavlinkserhbkmodchar"     	   //we are a character device driver
+#define  DEVICE_NAME "uxmhfpvduart"    			//device will appear at /dev/uxmhfpvduart
+#define  CLASS_NAME  "uxmhfpvduartchar"     	   //we are a character device driver
 
 MODULE_LICENSE("GPL");				//appease the kernel
 MODULE_AUTHOR("Amit Vasudevan");
-MODULE_DESCRIPTION("mavlinkserhb guest kernel-module char driver for uxmhf-rpi3");
+MODULE_DESCRIPTION("Para-virtualized UART driver kernel-module char driver for uxmhf-rpi3");
 MODULE_VERSION("0.1");
 
 static int    major_number;
 static int    number_opens = 0;
-static struct class*  mavlinkserhbcharClass  = NULL;
-static struct device* mavlinkserhbcharDevice = NULL;
+static struct class*  uxmhfpvduartcharClass  = NULL;
+static struct device* uxmhfpvduartcharDevice = NULL;
 
-//////
-//externals
-//////
-extern  void __hvc(u32 uhcall_function, void *uhcall_buffer, u32 uhcall_buffer_len);
-extern void mavlinkserhb_initialize(u32 baudrate);
-extern bool mavlinkserhb_send(u8 *buffer, u32 buf_len);
-extern bool mavlinkserhb_checkrecv(void);
-extern bool mavlinkserhb_recv(u8 *buffer, u32 max_len, u32 *len_read, bool *uartreadbufexhausted);
-extern bool mavlinkserhb_activatehbhyptask(u32 first_period, u32 recurring_period,
-		u32 priority);
-extern bool mavlinkserhb_deactivatehbhyptask(void);
 
 
 //////
@@ -89,71 +77,71 @@ static struct file_operations fops =
 
 static int dev_open(struct inode *inodep, struct file *filep){
    number_opens++;
-   printk(KERN_INFO "mavlinkserhbkmod: device has been opened %d time(s)\n", number_opens);
+   printk(KERN_INFO "uxmhfpvduartkmod: device has been opened %d time(s)\n", number_opens);
    return 0;
 }
 
 static ssize_t dev_write(struct file *filep, const char *buffer, size_t len, loff_t *offset){
 	switch(len){
-		case UAPP_MAVLINKSERHB_UHCALL_INITIALIZE:
-			printk(KERN_INFO "mavlinkserhbkmod: initialize\n");
-			mavlinkserhb_initialize(115200);
-			printk(KERN_INFO "mavlinkserhbkmod: initialization successful!\n");
+		case UAPP_uxmhfpvduart_UHCALL_INITIALIZE:
+			printk(KERN_INFO "uxmhfpvduartkmod: initialize\n");
+			uxmhfpvduart_initialize(115200);
+			printk(KERN_INFO "uxmhfpvduartkmod: initialization successful!\n");
 			break;
 
-		case UAPP_MAVLINKSERHB_UHCALL_SEND:
-			printk(KERN_INFO "mavlinkserhbkmod: send\n");
-			if(mavlinkserhb_send("Test", 4))
-				printk(KERN_INFO "mavlinkserhbkmod: send successful!\n");
+		case UAPP_uxmhfpvduart_UHCALL_SEND:
+			printk(KERN_INFO "uxmhfpvduartkmod: send\n");
+			if(uxmhfpvduart_send("Test", 4))
+				printk(KERN_INFO "uxmhfpvduartkmod: send successful!\n");
 			else
-				printk(KERN_INFO "mavlinkserhbkmod: error in send\n");
+				printk(KERN_INFO "uxmhfpvduartkmod: error in send\n");
 			break;
 
-		case UAPP_MAVLINKSERHB_UHCALL_CHECKRECV:
-			printk(KERN_INFO "mavlinkserhbkmod: checkrecv\n");
-			if(mavlinkserhb_checkrecv())
-				printk(KERN_INFO "mavlinkserhbkmod: recv buffer has data!\n");
+		case UAPP_uxmhfpvduart_UHCALL_CHECKRECV:
+			printk(KERN_INFO "uxmhfpvduartkmod: checkrecv\n");
+			if(uxmhfpvduart_checkrecv())
+				printk(KERN_INFO "uxmhfpvduartkmod: recv buffer has data!\n");
 			else
-				printk(KERN_INFO "mavlinkserhbkmod: no data in recv buffer\n");
+				printk(KERN_INFO "uxmhfpvduartkmod: no data in recv buffer\n");
 			break;
 
-		case UAPP_MAVLINKSERHB_UHCALL_RECV:
+		case UAPP_uxmhfpvduart_UHCALL_RECV:
 		{
 			bool readbufferexhausted;
 			u32 len_read;
 			u8 buffer[3];
-			printk(KERN_INFO "mavlinkserhbkmod: recv\n");
+			printk(KERN_INFO "uxmhfpvduartkmod: recv\n");
 			memset(buffer, sizeof(buffer), 0);
-			if(mavlinkserhb_recv(&buffer, sizeof(buffer), &len_read, &readbufferexhausted)){
-				printk(KERN_INFO "mavlinkserhbkmod: read: <0x%02x|0x%02x|0x%02x>, len_read=%u, \
+			if(uxmhfpvduart_recv(&buffer, sizeof(buffer), &len_read, &readbufferexhausted)){
+				printk(KERN_INFO "uxmhfpvduartkmod: read: <0x%02x|0x%02x|0x%02x>, len_read=%u, \
 						readbufferexhausted=%u\n", buffer[0], buffer[1], buffer[2],
 						len_read, readbufferexhausted);
 
 			}else{
-				printk(KERN_INFO "mavlinkserhbkmod: no data in recv buffer\n");
+				printk(KERN_INFO "uxmhfpvduartkmod: no data in recv buffer\n");
 			}
 		}
 			break;
 
-		case UAPP_MAVLINKSERHB_UHCALL_ACTIVATEHBHYPTASK:
-			if(mavlinkserhb_activatehbhyptask((0.5 * HYPMTSCHEDULER_TIME_1SEC),
+		case UAPP_uxmhfpvduart_UHCALL_ACTIVATEHBHYPTASK:
+			if(uxmhfpvduart_activatehbhyptask((0.5 * HYPMTSCHEDULER_TIME_1SEC),
 					(0.5 * HYPMTSCHEDULER_TIME_1SEC), 99)){
-				printk(KERN_INFO "mavlinkserhbkmod: started hb hyptask\n");
+				printk(KERN_INFO "uxmhfpvduartkmod: started hb hyptask\n");
 			}else{
-				printk(KERN_INFO "mavlinkserhbkmod: could not activate hb hyptask\n");
+				printk(KERN_INFO "uxmhfpvduartkmod: could not activate hb hyptask\n");
 			}
 			break;
 
-		case UAPP_MAVLINKSERHB_UHCALL_DEACTIVATEHBHYPTASK:
-			if(mavlinkserhb_deactivatehbhyptask()){
-				printk(KERN_INFO "mavlinkserhbkmod: deactivated hb hyptask\n");
+		case UAPP_uxmhfpvduart_UHCALL_DEACTIVATEHBHYPTASK:
+			if(uxmhfpvduart_deactivatehbhyptask()){
+				printk(KERN_INFO "uxmhfpvduartkmod: deactivated hb hyptask\n");
 			}else{
-				printk(KERN_INFO "mavlinkserhbkmod: could not de-activate hb hyptask\n");
+				printk(KERN_INFO "uxmhfpvduartkmod: could not de-activate hb hyptask\n");
 			}
 			break;
 
 		default:
-			printk(KERN_INFO "mavlinkserhbkmod: unknown function, ignoring\n");
+			printk(KERN_INFO "uxmhfpvduartkmod: unknown function, ignoring\n");
 			break;
 	}
 
@@ -162,7 +150,7 @@ static ssize_t dev_write(struct file *filep, const char *buffer, size_t len, lof
 
 static int dev_release(struct inode *inodep, struct file *filep){
    number_opens--;
-   printk(KERN_INFO "mavlinkserhbkmod: device successfully closed\n");
+   printk(KERN_INFO "uxmhfpvduartkmod: device successfully closed\n");
    return 0;
 }
 
@@ -172,38 +160,38 @@ static int dev_release(struct inode *inodep, struct file *filep){
 //////
 //module initialization function
 //////
-int mavlinkserhbkmod_init(void)
+int uxmhfpvduartkmod_init(void)
 {
 
-	printk(KERN_INFO "mavlinkserhbkmod: LOAD\n");
+	printk(KERN_INFO "uxmhfpvduartkmod: LOAD\n");
 	printk(KERN_INFO "author: amit vasudevan (amitvasudevan@acm.org)\n");
 
 	//try to allocate a major number dynamically
 	major_number = register_chrdev(0, DEVICE_NAME, &fops);
 	if (major_number<0){
-	  printk(KERN_ALERT "mavlinkserhbkmod: failed to register a major number\n");
+	  printk(KERN_ALERT "uxmhfpvduartkmod: failed to register a major number\n");
 	  return major_number;
 	}
-	printk(KERN_INFO "mavlinkserhbkmod: registered correctly with major number %d\n", major_number);
+	printk(KERN_INFO "uxmhfpvduartkmod: registered correctly with major number %d\n", major_number);
 
 	// Register the device class
-	mavlinkserhbcharClass = class_create(THIS_MODULE, CLASS_NAME);
-	if (IS_ERR(mavlinkserhbcharClass)){
+	uxmhfpvduartcharClass = class_create(THIS_MODULE, CLASS_NAME);
+	if (IS_ERR(uxmhfpvduartcharClass)){
 	  unregister_chrdev(major_number, DEVICE_NAME);
-	  printk(KERN_ALERT "mavlinkserhbkmod: Failed to register device class\n");
-	  return PTR_ERR(mavlinkserhbcharClass);
+	  printk(KERN_ALERT "uxmhfpvduartkmod: Failed to register device class\n");
+	  return PTR_ERR(uxmhfpvduartcharClass);
 	}
-	printk(KERN_INFO "mavlinkserhbkmod: device class registered correctly\n");
+	printk(KERN_INFO "uxmhfpvduartkmod: device class registered correctly\n");
 
 	// register the device driver
-	mavlinkserhbcharDevice = device_create(mavlinkserhbcharClass, NULL, MKDEV(major_number, 0), NULL, DEVICE_NAME);
-	if (IS_ERR(mavlinkserhbcharDevice)){
-	  class_destroy(mavlinkserhbcharClass);
+	uxmhfpvduartcharDevice = device_create(uxmhfpvduartcharClass, NULL, MKDEV(major_number, 0), NULL, DEVICE_NAME);
+	if (IS_ERR(uxmhfpvduartcharDevice)){
+	  class_destroy(uxmhfpvduartcharClass);
 	  unregister_chrdev(major_number, DEVICE_NAME);
-	  printk(KERN_ALERT "mavlinkserhbkmod:Failed to create the device\n");
-	  return PTR_ERR(mavlinkserhbcharDevice);
+	  printk(KERN_ALERT "uxmhfpvduartkmod:Failed to create the device\n");
+	  return PTR_ERR(uxmhfpvduartcharDevice);
 	}
-	printk(KERN_INFO "mavlinkserhbkmod: device class created correctly\n");
+	printk(KERN_INFO "uxmhfpvduartkmod: device class created correctly\n");
 
 
 	return 0;
@@ -214,15 +202,15 @@ int mavlinkserhbkmod_init(void)
 //////
 //module unload function
 //////
-void mavlinkserhbkmod_exit(void)
+void uxmhfpvduartkmod_exit(void)
 {
-	device_destroy(mavlinkserhbcharClass, MKDEV(major_number, 0));     // remove the device
-	class_unregister(mavlinkserhbcharClass);                          // unregister the device class
-	class_destroy(mavlinkserhbcharClass);                             // remove the device class
+	device_destroy(uxmhfpvduartcharClass, MKDEV(major_number, 0));     // remove the device
+	class_unregister(uxmhfpvduartcharClass);                          // unregister the device class
+	class_destroy(uxmhfpvduartcharClass);                             // remove the device class
 	unregister_chrdev(major_number, DEVICE_NAME);             // unregister the major number
-	printk(KERN_INFO "mavlinkserhbkmod: UNLOAD\n");
+	printk(KERN_INFO "uxmhfpvduartkmod: UNLOAD\n");
 }
 
-module_init(mavlinkserhbkmod_init);
-module_exit(mavlinkserhbkmod_exit);
+module_init(uxmhfpvduartkmod_init);
+module_exit(uxmhfpvduartkmod_exit);
 #endif

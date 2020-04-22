@@ -6,9 +6,11 @@
 #
 # PATH_UXMHF = full path to uxmhf (git) source tree
 #
+CURRENT_DIR := $(realpath $(src))
+
 
 obj-m := uxmhf_pvduart_kmod.o
-ccflags-y :=-I$(PATH_UXMHF)/uxmhf-rpi3/include
+ccflags-y := -I$(CURRENT_DIR) -I$(PATH_UXMHF)/uxmhf-rpi3/include
 
 
 uxmhf_pvduart_kmod-objs := pvdriver_uart_kmod.o pvdriver_uart_kmodsup.o pvdriver_uart_kmodlib.o
