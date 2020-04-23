@@ -38,6 +38,7 @@
 #include <linux/kernel.h>         // contains types, macros, functions for the kernel
 #include <linux/fs.h>             // header for the Linux file system support
 #include <linux/delay.h>
+#include <linux/slab.h>
 #include <asm/uaccess.h>          // required for the copy to user function
 
 #include <uapp-pvdriver-uart.h>
@@ -148,8 +149,48 @@ static ssize_t dev_write(struct file *filep, const char *buffer, size_t len, lof
 
 
 static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *offset){
+	int l_error=0;
+	u32 len_read;
+	u8 *l_buffer;
+	bool readbufferexhausted;
 
-	return 0;
+	printk(KERN_INFO "uxmhfpvduartkmod: recv\n");
+	
+	//allocate buffer
+	l_buffer = kmalloc(4096, GFP_KERNEL);
+	if(l_buffer){
+
+		if(uxmhfpvduart_recv((u8  *)l_buffer, sizeof(l_buffer), &len_read, &readbufferexhausted)){
+			//successful invocation to recv, copy to buffer if there is somethins read
+			if(len_read){
+				printk(KERN_INFO "uxmhfpvduartkmod: received %u bytes, copying to user buffer\n", len_read);
+				l_error = copy_to_user(buffer, (char *)&l_buffer, len_read);
+			}else{
+				printk(KERN_INFO "uxmhfpvduartkmod: nothing to receive\n");
+				l_error=0;
+			}
+
+			if(l_error != 0)
+				l_error = -EFAULT;
+
+		}else{
+			//error in recv
+			printk(KERN_INFO "uxmhfpvduartkmod: error in recv!\n");
+			l_error = -EFAULT;
+		}
+
+		//free the recv buffer
+		kfree(l_buffer);
+
+	}else{
+		//error in buffer allocation
+		printk(KERN_INFO "uxmhfpvduartkmod: error in allocating recv buffer!\n");
+		l_error=-EFAULT;
+	}
+
+
+	printk(KERN_INFO "uxmhfpvduartkmod: l_error=%u\n", l_error);
+	return l_error;
 }
 
 
@@ -219,3 +260,13 @@ void uxmhfpvduartkmod_exit(void)
 
 module_init(uxmhfpvduartkmod_init);
 module_exit(uxmhfpvduartkmod_exit);
+
+
+//////
+// functionality that should eventually be exposed via ioctl
+//////
+#if 0
+
+
+
+#endif
