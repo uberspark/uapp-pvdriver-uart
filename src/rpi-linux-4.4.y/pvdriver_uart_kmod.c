@@ -199,6 +199,9 @@ int uxmhfpvduartkmod_init(void)
 	}
 	printk(KERN_INFO "uxmhfpvduartkmod: device class created correctly\n");
 
+	//initialize UART
+	uxmhfpvduart_init();
+	printk(KERN_INFO "uxmhfpvduartkmod: successfully initialized UART\n");
 
 	return 0;
 }
