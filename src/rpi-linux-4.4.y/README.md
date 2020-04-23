@@ -62,11 +62,14 @@ Usage
 
 1. copy over uxmhf_pvduart_kmod.ko to the Pi3 (e.g., at ~/uxmhf_pvduart_kmod.ko)
 
-2. load the module using
+2. copy over PL011_test/target_recv.py to the Pi3 (e.g., at ~/target_recv.py)
+
+3. boot the Pi3 with uberXMHF and once the guest OS has booted up, load the module using
    sudo insmod ~/uxmhf_pvduart_kmod.ko
 
-3. perform test
+4. run python PL011_test/host_send.py on the host system and run python ~/target_recv.py on the Pi3
+   if everything goes well the Pi3 should receive 18 bytes successfully!
 
-4. unload the module using
+5. unload the module using
    sudo rmmod ~/uxmhf_pvduart_kmod.ko
 
