@@ -89,7 +89,7 @@ static ssize_t dev_write(struct file *filep, const char *buffer, size_t len, lof
 	int l_error=0;
 	printk(KERN_INFO "uxmhfpvduartkmod: write, buffer=0x%08x, len=0x%08x\n", buffer, len);
 	
-	if(len > 4096){
+	if(len > 4096 || buffer == NULL){
 		l_error = -EFAULT;
 	}else{
 		if(uxmhfpvduart_send(buffer, len)){
@@ -123,13 +123,14 @@ static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *of
 			if(len_read){
 				printk(KERN_INFO "uxmhfpvduartkmod: received %u bytes, copying to user buffer\n", len_read);
 				l_error = copy_to_user(buffer, (char *)&l_buffer, len_read);
+				if(l_error == 0) 
+					l_error=len_read;
+				else	
+					l_error=-EFAULT;
 			}else{
 				printk(KERN_INFO "uxmhfpvduartkmod: nothing to receive\n");
 				l_error=0;
 			}
-
-			if(l_error != 0)
-				l_error = -EFAULT;
 
 		}else{
 			//error in recv
