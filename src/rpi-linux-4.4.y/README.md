@@ -29,6 +29,12 @@ Building and Installing uberXMHF
 
 1. do a make docs_html within uberxmhf.git/docs folder and read uberxmhf.git/docs/_build/index.html. Refer to
    raspberry pi3 build and installation instructions. Note: you will need to pass --enable-uart-pl011 and --enable-uapp-pvdriver-uart at the build configuration step.
+
+
+2. you will also need to have the debugging setup as mentioned in the raspberry pi3 debugging documentation within
+   uberXMHF so you can test the UART para-virtualized driver with the test scripts. As per the documentation we
+   will refere to the target system as the Pi3 running uberXMHF along with the UART para virtualized driver and the
+   host system as the test-bed dual.
       
 
 
