@@ -33,14 +33,16 @@ Building and Installing uberXMHF
    `--enable-uart-pl011-ctsrts`, and `--enable-uapp-pvdriver-uart` at the build configuration step.
 
    1. note: you __cannot__ specify ``--enable-debug-uart`` in the context above
+   1. make sure to read and follow the additional requirements for kernel recompilation for --enable-uapp-pvdriver-uart
+      during uberXMHF build and installation
    1. with the above options, we are limited to interacting with the PI3 either via a dedicated screen 
       and keyboard or via SSH (network). The serial interface will not be available for logging in and interacting
       with the pi3
 
 1. you will also need to have the debugging setup as mentioned in the raspberry pi3 debugging documentation within
    uberXMHF so you can test the UART para-virtualized driver with the test scripts. As per the documentation we
-   will refer to the target system as the Pi3 running uberXMHF along with the UART para virtualized driver and the
-   host system as the test-bed dual.
+   will refer to the `target system` as the Pi3 running uberXMHF along with the UART para virtualized driver and the
+   `host system` as the test-bed dual.
       
 
 
@@ -82,3 +84,42 @@ Usage
 1. unload the module using
    sudo rmmod uxmhf_pvduart_kmod.ko
 
+
+Kernel-module Developer Notes
+-----------------------------
+
+This section is for developers intending to use the para-virtualized UART functionality from within their
+__own__ kernel module.
+
+1. copy over `pvdriver_uart_kmodlib.c` and `pvdriver_uart.h` to your own kernel module source directory and 
+   add them to the `Makefile`
+
+1. the following are functions are now available to the kernel-module developer:
+
+	1. `void uxmhfpvduart_init(void)` : this function initializes the 
+	UART hardware with 115200 baudrate with the typical `8N1` (8 data bits,
+	no parity bit, 1 stop bit) configuration. 
+
+	1. `bool uxmhfpvduart_send(u8 *buffer, u32 buf_len)` : this function
+	sends (writes) a `buffer` of `buf_len` bytes to the UART. returns `true` on
+	sucess and `false` on failure.
+
+	1. `bool uxmhfpvduart_recv(u8 *buffer, u32 max_len, u32 *len_read, bool *uartreadbufexhausted)` :
+	this function reads the UART receive buffer into the `buffer` specified 
+	upto `max_len` bytes and returns the actual number of bytes read into 
+	`len_read`. The function sets `uartreadbufexhausted` to `true` if the UART receive buffer is empty as a result	of this read. A return value of `false` in 
+	`uartreadbufexhausted` indicates the UART receive
+	buffer still has pending bytes to be read after this function returns 
+	(e.g., if `max_len` was less than number of bytes in the UART receive
+	buffer).
+
+	1. `bool uxmhfpvduart_can_send(void)` : this function returns `true` if
+	the UART is ready to transmit data. A return
+	value of `false` indicates that the UART is not ready to transmit.
+
+	1. `bool uxmhfpvduart_can_recv(void)` : this function returns `true` if
+	there are bytes waiting to be read from the UART receive buffer. A return
+	value of `false` signifies an empty receive buffer.
+
+	1. `void uxmhfpvduart_flush(void)` : this function flushes the UART transmit
+   and receive FIFO buffers.
