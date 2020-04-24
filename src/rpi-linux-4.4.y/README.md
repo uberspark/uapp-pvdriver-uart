@@ -27,13 +27,15 @@ Prepping Raspbian Linux on the Pi3
 Building and Installing uberXMHF
 --------------------------------
 
-1. do a make docs_html within uberxmhf.git/docs folder and read uberxmhf.git/docs/_build/index.html. Refer to
-   raspberry pi3 build and installation instructions. Note: you will need to pass --enable-uart-pl011 and --enable-uapp-pvdriver-uart at the build configuration step.
+1. do a `make clean` followed by a `make docs_html` within `uberxmhf.git/docs` folder and read 
+   `uberxmhf.git/docs/_build/index.html`. Refer to
+   raspberry pi3 build and installation instructions. Note: you will need to pass `--enable-uart-pl011`, 
+   `--enable-uart-pl011-ctsrts`, and `--enable-uapp-pvdriver-uart` at the build configuration step.
 
 
 2. you will also need to have the debugging setup as mentioned in the raspberry pi3 debugging documentation within
    uberXMHF so you can test the UART para-virtualized driver with the test scripts. As per the documentation we
-   will refere to the target system as the Pi3 running uberXMHF along with the UART para virtualized driver and the
+   will refer to the target system as the Pi3 running uberXMHF along with the UART para virtualized driver and the
    host system as the test-bed dual.
       
 
@@ -62,14 +64,17 @@ Usage
 
 1. copy over uxmhf_pvduart_kmod.ko to the Pi3 (e.g., at ~/uxmhf_pvduart_kmod.ko)
 
-2. copy over PL011_test/target_recv.py to the Pi3 (e.g., at ~/target_recv.py)
+2. copy over `PL011_test/target_recv.py` and `PL011_test/target_send.py` to the Pi3 (e.g., at ~/.)
 
 3. boot the Pi3 with uberXMHF and once the guest OS has booted up, load the module using
    sudo insmod ~/uxmhf_pvduart_kmod.ko
 
 4. run python PL011_test/host_recv.py on the host system and run python ~/target_send.py on the Pi3
-   if everything goes well,  the host system should receive the string "hello world!" successfully!
+   if everything goes well,  the host system should receive the string "hello world from UART!" successfully!
 
-5. unload the module using
-   sudo rmmod ~/uxmhf_pvduart_kmod.ko
+5. run python PL011_test/host_send.py on the host system and run python ~/target_recv.py on the Pi3
+   if everything goes well,  the pi3 should receive the string "hello world from UART!" successfully!
+
+6. unload the module using
+   sudo rmmod uxmhf_pvduart_kmod.ko
 
