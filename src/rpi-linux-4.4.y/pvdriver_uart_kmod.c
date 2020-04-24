@@ -118,7 +118,7 @@ static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *of
 	l_buffer = kmalloc(4096, GFP_KERNEL);
 	if(l_buffer){
 
-		if(uxmhfpvduart_recv((u8  *)l_buffer, sizeof(l_buffer), &len_read, &readbufferexhausted)){
+		if(uxmhfpvduart_recv((u8  *)l_buffer, len, &len_read, &readbufferexhausted)){
 			printk(KERN_INFO "uxmhfpvduartkmod: recv: after hypercall: len_read=0x%08x, readbufferexhausted=0x%08x\n", 
 						len_read, readbufferexhausted);
 			//successful invocation to recv, copy to buffer if there is somethins read
