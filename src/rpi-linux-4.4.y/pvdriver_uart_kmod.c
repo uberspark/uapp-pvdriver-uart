@@ -112,25 +112,34 @@ static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *of
 	u8 *l_buffer;
 	bool readbufferexhausted;
 
-	printk(KERN_INFO "uxmhfpvduartkmod: recv: buffer=0x%08x, len=0x%08x\n", buffer, len);
+	//printk(KERN_INFO "uxmhfpvduartkmod: recv: buffer=0x%08x, len=0x%08x\n", buffer, len);
 	
 	//allocate buffer
 	l_buffer = kmalloc(4096, GFP_KERNEL);
 	if(l_buffer){
 
 		if(uxmhfpvduart_recv((u8  *)l_buffer, len, &len_read, &readbufferexhausted)){
-			printk(KERN_INFO "uxmhfpvduartkmod: recv: after hypercall: len_read=0x%08x, readbufferexhausted=0x%08x\n", 
-						len_read, readbufferexhausted);
 			//successful invocation to recv, copy to buffer if there is somethins read
 			if(len_read){
+				printk(KERN_INFO "uxmhfpvduartkmod: recv: after hypercall: len_read=0x%08x, readbufferexhausted=0x%08x\n", 
+						len_read, readbufferexhausted);
+			
 				printk(KERN_INFO "uxmhfpvduartkmod: received %u bytes, copying to user buffer\n", len_read);
-				l_error = copy_to_user(buffer, (char *)&l_buffer, len_read);
+				l_error = copy_to_user(buffer, (char *)l_buffer, len_read);
+				
+				{
+					int i=0;
+					for(i=0; i < len_read; i++)
+						printk(KERN_INFO "%c", l_buffer[i]);
+					printk(KERN_INFO "\n");
+				}
+
 				if(l_error == 0) 
 					l_error=len_read;
 				else	
 					l_error=-EFAULT;
 			}else{
-				printk(KERN_INFO "uxmhfpvduartkmod: nothing to receive\n");
+				//printk(KERN_INFO "uxmhfpvduartkmod: nothing to receive\n");
 				l_error=0;
 			}
 
@@ -150,7 +159,7 @@ static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *of
 	}
 
 
-	printk(KERN_INFO "uxmhfpvduartkmod: read: l_error=%u\n", l_error);
+	//printk(KERN_INFO "uxmhfpvduartkmod: read: l_error=%u\n", l_error);
 	return l_error;
 }
 
